@@ -18,7 +18,7 @@ async fn main() {
 
     //let client = runtime.block_on(api::get_client()).unwrap();//.expect("No ZSA Keyboard connected or Keymapp's api is not started: {:?}");
 
-    let mut buf: utils::PixelBuf<u16, 4, 4> = utils::PixelBuf::new();
+    let mut buf: utils::PixelBuf<u16, 4, 4, 3> = utils::PixelBuf::new();
 
     const WIDTH: i16 = 12; // Change this to adjust the board width
     const HEIGHT: i16 = 4; // Change this to adjust the board height
@@ -156,7 +156,7 @@ async fn main() {
 
                 runtime.block_on(api::set_rgb_led(
                     utils::pos_to_voyager(*x as u16, *y as u16),
-                    20,
+                    80,
                     0,
                     0,
                     0,
@@ -198,7 +198,7 @@ async fn main() {
                 last_update = get_time();
                 runtime.block_on(api::set_rgb_all(0, 0, 0, 0));
 
-                let a = utils::text_to_px("game over");
+                let mut a = utils::text_to_px("game over");
                 a.foreach_px(|x, y, v| {
                     if v > 0 {
                         runtime.block_on(api::set_rgb_led(

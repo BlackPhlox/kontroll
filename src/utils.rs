@@ -37,7 +37,7 @@ pub fn pos_to_voyager(x: u16, y: u16) -> usize {
 
 pub struct PixelBuf<T, const X: usize, const Y: usize, const X_Limit: usize> {
     data: Vec<[[T; X]; Y]>,
-    prev: [[[T; X]; Y]; X_Limit]
+    prev: Option<[[[T; X]; Y]; X_Limit]>
 }
 
 #[rustfmt::skip]
@@ -343,28 +343,30 @@ pub fn text_to_px(a: &str) -> PixelBuf<u16, 4, 4, 3> {
             _ => v.push(UNKNOWN_CHAR),
         }
     }
-    PixelBuf { data: v, prev: [SPACE_CHAR, SPACE_CHAR, SPACE_CHAR] }
+    PixelBuf { data: v, prev: Some([SPACE_CHAR, SPACE_CHAR, SPACE_CHAR]) }
 }
 
-impl<T, const X: usize, const Y: usize, const X_Limit: usize> PixelBuf<T, X, Y, X_Limit>
+impl<T, const X: usize, const Y: usize, const X_LIMIT: usize> PixelBuf<T, X, Y, X_LIMIT>
 where
     T: Copy + PartialEq
 {
-    pub fn new() -> PixelBuf<T, {X}, {Y}, {X_Limit}>{
-        PixelBuf { data: vec![], prev: [[[T; X]; Y]; X_Limit] }
+    pub fn new() -> PixelBuf<T, {X}, {Y}, {X_LIMIT}>{
+        PixelBuf { data: vec![], prev: None }
     }
 
     pub fn foreach_px(&mut self, f: impl Fn(usize, usize, T)) {
         for (i, px_char) in self.data.iter().enumerate() {
             for y in 0..Y {
                 for x in 0..X {
-                    if i <= X_Limit {
-                        let v = px_char[y][x];
-                        if self.prev[i][y][x].eq(&v){
-                            continue;
-                        } else {
-                            f(x + X * i, y, v);
-                            self.prev[i][y][x] = v;
+                    if i <= X_LIMIT {
+                        if let Some(prev) = self.prev {
+                            let v = px_char[y][x];
+                            if prev[i][y][x].eq(&v){
+                                continue;
+                            } else {
+                                f(x + X * i, y, v);
+                                self.prev.unwrap()[i][y][x] = v;
+                            }
                         }
                     } else{
                         return;
