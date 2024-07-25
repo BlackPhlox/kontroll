@@ -1,5 +1,7 @@
+use kontroll::{api, utils};
 use macroquad::prelude::*;
 use std::collections::LinkedList;
+use tokio::runtime::Runtime;
 
 type Point = (i16, i16);
 
@@ -10,7 +12,14 @@ struct Snake {
 }
 
 #[macroquad::main("Snake")]
+#[tokio::main]
 async fn main() {
+    let mut runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
+
+    //let client = runtime.block_on(api::get_client()).unwrap();//.expect("No ZSA Keyboard connected or Keymapp's api is not started: {:?}");
+
+    let mut buf: utils::PixelBuf<u16, 4, 4> = utils::PixelBuf::new();
+
     const WIDTH: i16 = 12; // Change this to adjust the board width
     const HEIGHT: i16 = 4; // Change this to adjust the board height
 
@@ -67,7 +76,6 @@ async fn main() {
                 if snake.head == fruit {
                     fruit = (rand::gen_range(0, WIDTH), rand::gen_range(0, HEIGHT));
                     score += 100;
-                    speed *= 0.9;
                 } else {
                     snake.body.pop_back();
                 }
@@ -78,6 +86,7 @@ async fn main() {
                     }
                 }
                 navigation_lock = false;
+                runtime.block_on(api::set_rgb_all(0, 0, 0, 0));
             }
         }
         if !game_over {
@@ -90,7 +99,13 @@ async fn main() {
             let sq_width = (screen_width() - offset_x * 2.) / WIDTH as f32;
             let sq_height = (screen_height() - offset_y * 2.) / HEIGHT as f32;
 
-            draw_rectangle(offset_x, offset_y, game_width - 20., game_height - 20., WHITE);
+            draw_rectangle(
+                offset_x,
+                offset_y,
+                game_width - 20.,
+                game_height - 20.,
+                WHITE,
+            );
 
             for i in 1..WIDTH {
                 draw_line(
@@ -122,6 +137,14 @@ async fn main() {
                 DARKGREEN,
             );
 
+            runtime.block_on(api::set_rgb_led(
+                utils::pos_to_voyager(snake.head.0 as u16, snake.head.1 as u16),
+                255,
+                0,
+                0,
+                0,
+            ));
+
             for (x, y) in &snake.body {
                 draw_rectangle(
                     offset_x + *x as f32 * sq_width,
@@ -130,6 +153,14 @@ async fn main() {
                     sq_height,
                     LIME,
                 );
+
+                runtime.block_on(api::set_rgb_led(
+                    utils::pos_to_voyager(*x as u16, *y as u16),
+                    20,
+                    0,
+                    0,
+                    0,
+                ));
             }
 
             draw_rectangle(
@@ -140,14 +171,21 @@ async fn main() {
                 GOLD,
             );
 
+            runtime.block_on(api::set_rgb_led(
+                utils::pos_to_voyager(fruit.0 as u16, fruit.1 as u16),
+                255,
+                255,
+                224,
+                0,
+            ));
+
             draw_text(format!("SCORE: {score}").as_str(), 10., 20., 20., DARKGRAY);
-            api::set_rgb_led();
         } else {
             clear_background(WHITE);
             let text = "Game Over. Press [enter] to play again.";
             let font_size = 30.;
             let text_size = measure_text(text, None, font_size as _, 1.0);
-
+            speed = 1.0;
             draw_text(
                 text,
                 screen_width() / 2. - text_size.width / 2.,
@@ -155,6 +193,24 @@ async fn main() {
                 font_size,
                 DARKGRAY,
             );
+
+            if get_time() - last_update > speed {
+                last_update = get_time();
+                runtime.block_on(api::set_rgb_all(0, 0, 0, 0));
+
+                let a = utils::text_to_px("game over");
+                a.foreach_px(|x, y, v| {
+                    if v > 0 {
+                        runtime.block_on(api::set_rgb_led(
+                            utils::pos_to_voyager(x as u16, y as u16),
+                            255,
+                            0,
+                            0,
+                            0,
+                        ));
+                    }
+                });
+            }
 
             if is_key_down(KeyCode::Enter) {
                 snake = Snake {
