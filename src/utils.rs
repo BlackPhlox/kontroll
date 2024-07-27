@@ -331,7 +331,7 @@ pub fn text_to_px(a: &str) -> PixelBuf<u16, 4, 4, 3> {
             'o' => v.push(L_O),
             'p' => v.push(L_P),
             'q' => v.push(L_Q),
-            's' => v.push(L_R),
+            'r' => v.push(L_R),
             's' => v.push(L_S),
             't' => v.push(L_T),
             'u' => v.push(L_U),
